@@ -62,3 +62,86 @@ LEFT JOIN raw.product_category AS f ON f.category_id = c.parent_id;    -- famili
 --       CAST(strftime(fecha, '%Y%m%d') AS INTEGER)
 --   * Si algo puede venir vacío (ej. NPS anónimos, sin cliente), podés agregar
 --     una fila "Desconocido" con clave -1 y usar COALESCE(clave, -1) en los hechos.
+
+-- ---------------------------------------------------------------
+-- Dimensión canal
+-- ---------------------------------------------------------------
+CREATE TABLE dim_channel (
+    channel_key  INTEGER PRIMARY KEY,
+    channel_id   INTEGER NOT NULL,
+    code         VARCHAR NOT NULL,
+    name         VARCHAR NOT NULL
+);
+
+INSERT INTO dim_channel
+SELECT
+    ROW_NUMBER() OVER (ORDER BY c.channel_id) AS channel_key,
+    c.channel_id,
+    c.code,
+    c.name
+FROM raw.channel AS c;
+
+-- ---------------------------------------------------------------
+-- Dimensión provincia
+-- ---------------------------------------------------------------
+CREATE TABLE dim_province (
+    province_key  INTEGER PRIMARY KEY,
+    province_id   INTEGER NOT NULL,
+    code          VARCHAR NOT NULL,
+    name          VARCHAR NOT NULL
+);
+
+INSERT INTO dim_province
+SELECT
+    ROW_NUMBER() OVER (ORDER BY c.province_id) AS province_key,
+    c.province_id,
+    c.code,
+    c.name
+FROM raw.province AS c;
+
+-- ---------------------------------------------------------------
+-- Dimensión tienda
+-- ---------------------------------------------------------------
+CREATE TABLE dim_store (
+    store_key  INTEGER PRIMARY KEY,
+    store_id   INTEGER NOT NULL,
+    name       VARCHAR NOT NULL,
+    address    VARCHAR,
+    city       VARCHAR,
+    province   VARCHAR
+);
+
+INSERT INTO dim_store
+SELECT
+    ROW_NUMBER() OVER (ORDER BY s.store_id) AS store_key,
+    s.store_id,
+    s.name,
+    a.line1  AS address,
+    a.city,
+    p.name   AS province
+FROM raw.store AS s
+LEFT JOIN raw.address  AS a ON a.address_id  = s.address_id
+LEFT JOIN raw.province AS p ON p.province_id = a.province_id;
+
+-- ---------------------------------------------------------------
+-- Dimensión cliente
+-- ---------------------------------------------------------------
+CREATE TABLE dim_customer (
+    customer_key  INTEGER PRIMARY KEY,
+    customer_id   INTEGER NOT NULL,
+    full_name     VARCHAR,
+    status        VARCHAR,
+    created_at    TIMESTAMP
+);
+
+INSERT INTO dim_customer
+SELECT
+    ROW_NUMBER() OVER (ORDER BY c.customer_id) AS customer_key,
+    c.customer_id,
+    c.first_name || ' ' || c.last_name AS full_name,
+    c.status,
+    c.created_at
+FROM raw.customer AS c;
+
+-- Fila para hechos sin cliente (ej. NPS anónimos)
+INSERT INTO dim_customer VALUES (-1, -1, 'Desconocido', NULL, NULL);
