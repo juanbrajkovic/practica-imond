@@ -109,3 +109,44 @@ SELECT
 FROM raw.nps_response AS n
 LEFT JOIN dim_customer AS c  ON c.customer_id = n.customer_id
 LEFT JOIN dim_channel  AS ch ON ch.channel_id = n.channel_id;
+
+-- ---------------------------------------------------------------
+-- Hecho pedidos: una fila por pedido (cabecera)
+-- Base para Ventas, Ticket Promedio y Ventas por Provincia
+-- ---------------------------------------------------------------
+CREATE TABLE fact_orders (
+    order_id       BIGINT PRIMARY KEY,
+    date_key       INTEGER REFERENCES dim_date(date_key),
+    customer_key   INTEGER REFERENCES dim_customer(customer_key),
+    channel_key    INTEGER REFERENCES dim_channel(channel_key),
+    store_key      INTEGER REFERENCES dim_store(store_key),
+    province_key   INTEGER REFERENCES dim_province(province_key),
+    status         VARCHAR,
+    is_valid_sale  BOOLEAN,          -- TRUE si PAID o FULFILLED
+    subtotal       DECIMAL(12, 2),
+    tax_amount     DECIMAL(12, 2),
+    shipping_fee   DECIMAL(12, 2),
+    total_amount   DECIMAL(12, 2)
+);
+
+INSERT INTO fact_orders
+SELECT
+    o.order_id,
+    CAST(strftime(o.order_date, '%Y%m%d') AS INTEGER) AS date_key,
+    COALESCE(c.customer_key, -1)  AS customer_key,
+    ch.channel_key,
+    COALESCE(s.store_key, -1)     AS store_key,
+    COALESCE(pr.province_key, -1) AS province_key,
+    o.status,
+    o.status IN ('FULFILLED', 'PAID') AS is_valid_sale,
+    o.subtotal,
+    o.tax_amount,
+    o.shipping_fee,
+    o.total_amount
+FROM raw.sales_order AS o
+LEFT JOIN dim_customer AS c  ON c.customer_id  = o.customer_id
+LEFT JOIN dim_channel  AS ch ON ch.channel_id  = o.channel_id
+LEFT JOIN dim_store    AS s  ON s.store_id     = o.store_id
+-- provincia según la dirección de envío (en tienda = dirección de la tienda)
+LEFT JOIN raw.address  AS sa ON sa.address_id  = o.shipping_address_id
+LEFT JOIN dim_province AS pr ON pr.province_id = sa.province_id;

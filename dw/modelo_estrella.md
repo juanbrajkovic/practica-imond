@@ -5,13 +5,18 @@ Generado por `run_sql.py` a partir de las tablas de `warehouse.duckdb`.
 ```mermaid
 erDiagram
     dim_channel ||--o{ fact_nps : "channel_key"
+    dim_channel ||--o{ fact_orders : "channel_key"
     dim_channel ||--o{ fact_sales : "channel_key"
     dim_customer ||--o{ fact_nps : "customer_key"
+    dim_customer ||--o{ fact_orders : "customer_key"
     dim_customer ||--o{ fact_sales : "customer_key"
     dim_date ||--o{ fact_nps : "date_key"
+    dim_date ||--o{ fact_orders : "date_key"
     dim_date ||--o{ fact_sales : "date_key"
     dim_product ||--o{ fact_sales : "product_key"
+    dim_province ||--o{ fact_orders : "province_key"
     dim_province ||--o{ fact_sales : "province_key"
+    dim_store ||--o{ fact_orders : "store_key"
     dim_store ||--o{ fact_sales : "store_key"
     dim_channel {
         INTEGER channel_key PK
@@ -71,6 +76,20 @@ erDiagram
         INTEGER is_promoter
         INTEGER is_detractor
         VARCHAR comment
+    }
+    fact_orders {
+        BIGINT order_id PK
+        INTEGER date_key FK
+        INTEGER customer_key FK
+        INTEGER channel_key FK
+        INTEGER store_key FK
+        INTEGER province_key FK
+        VARCHAR status
+        BOOLEAN is_valid_sale
+        DECIMAL subtotal
+        DECIMAL tax_amount
+        DECIMAL shipping_fee
+        DECIMAL total_amount
     }
     fact_sales {
         BIGINT order_item_id PK
