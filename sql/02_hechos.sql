@@ -150,3 +150,33 @@ LEFT JOIN dim_store    AS s  ON s.store_id     = o.store_id
 -- provincia según la dirección de envío (en tienda = dirección de la tienda)
 LEFT JOIN raw.address  AS sa ON sa.address_id  = o.shipping_address_id
 LEFT JOIN dim_province AS pr ON pr.province_id = sa.province_id;
+
+-- ---------------------------------------------------------------
+-- Hecho sesiones web: una fila por visita
+-- Base para Usuarios Activos
+-- ---------------------------------------------------------------
+CREATE TABLE fact_web_session (
+    session_id        BIGINT PRIMARY KEY,
+    date_key          INTEGER REFERENCES dim_date(date_key),
+    customer_key      INTEGER REFERENCES dim_customer(customer_key),
+    channel_key       INTEGER REFERENCES dim_channel(channel_key),
+    source            VARCHAR,     -- ads / direct / referral / organic
+    device            VARCHAR,
+    is_logged_in      BOOLEAN,     -- TRUE si el visitante inició sesión
+    duration_seconds  INTEGER
+);
+
+INSERT INTO fact_web_session
+SELECT
+    w.session_id,
+    CAST(strftime(w.started_at, '%Y%m%d') AS INTEGER) AS date_key,
+    COALESCE(c.customer_key, -1) AS customer_key,
+    ch.channel_key,
+    w.source,
+    w.device,
+    w.customer_id IS NOT NULL AS is_logged_in,
+    date_diff('second', w.started_at, w.ended_at) AS duration_seconds
+FROM raw.web_session AS w
+LEFT JOIN dim_customer AS c  ON c.customer_id = w.customer_id
+-- todas las visitas web son del canal ONLINE
+LEFT JOIN dim_channel  AS ch ON ch.code = 'ONLINE';

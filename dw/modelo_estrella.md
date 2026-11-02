@@ -7,12 +7,15 @@ erDiagram
     dim_channel ||--o{ fact_nps : "channel_key"
     dim_channel ||--o{ fact_orders : "channel_key"
     dim_channel ||--o{ fact_sales : "channel_key"
+    dim_channel ||--o{ fact_web_session : "channel_key"
     dim_customer ||--o{ fact_nps : "customer_key"
     dim_customer ||--o{ fact_orders : "customer_key"
     dim_customer ||--o{ fact_sales : "customer_key"
+    dim_customer ||--o{ fact_web_session : "customer_key"
     dim_date ||--o{ fact_nps : "date_key"
     dim_date ||--o{ fact_orders : "date_key"
     dim_date ||--o{ fact_sales : "date_key"
+    dim_date ||--o{ fact_web_session : "date_key"
     dim_product ||--o{ fact_sales : "product_key"
     dim_province ||--o{ fact_orders : "province_key"
     dim_province ||--o{ fact_sales : "province_key"
@@ -106,5 +109,15 @@ erDiagram
         DECIMAL unit_price
         DECIMAL discount_amount
         DECIMAL line_total
+    }
+    fact_web_session {
+        BIGINT session_id PK
+        INTEGER date_key FK
+        INTEGER customer_key FK
+        INTEGER channel_key FK
+        VARCHAR source
+        VARCHAR device
+        BOOLEAN is_logged_in
+        INTEGER duration_seconds
     }
 ```
