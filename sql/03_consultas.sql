@@ -142,3 +142,58 @@ JOIN dim_product AS p ON p.product_key = f.product_key
 WHERE f.is_valid_sale
 GROUP BY d.year_month, p.name
 ORDER BY d.year_month, ranking;
+
+-- ===============================================================
+-- HALLAZGOS
+-- ===============================================================
+
+-- Hallazgo 1: Tiempos de entrega por provincia (meta: reducir en Mendoza)
+SELECT
+    p.name                                      AS provincia,
+    COUNT(*)                                    AS envios_entregados,
+    ROUND(AVG(f.order_to_delivery_days), 1)     AS dias_compra_a_entrega,
+    ROUND(AVG(f.transit_days), 1)               AS dias_en_viaje,
+    MAX(f.order_to_delivery_days)               AS peor_caso_dias
+FROM fact_shipment AS f
+JOIN dim_province  AS p ON p.province_key = f.province_key
+WHERE f.status = 'DELIVERED'
+GROUP BY p.name
+ORDER BY dias_compra_a_entrega DESC;
+
+-- Hallazgo 2: Días de compra a entrega por mes, una columna por provincia
+SELECT
+    d.year_month,
+    ROUND(AVG(f.order_to_delivery_days) FILTER (WHERE p.name = 'Buenos Aires'), 1) AS buenos_aires,
+    ROUND(AVG(f.order_to_delivery_days) FILTER (WHERE p.name = 'Córdoba'), 1)      AS cordoba,
+    ROUND(AVG(f.order_to_delivery_days) FILTER (WHERE p.name = 'Santa Fe'), 1)     AS santa_fe,
+    ROUND(AVG(f.order_to_delivery_days) FILTER (WHERE p.name = 'Mendoza'), 1)      AS mendoza
+FROM fact_shipment AS f
+JOIN dim_province  AS p ON p.province_key = f.province_key
+JOIN dim_date      AS d ON d.date_key     = f.date_key
+WHERE f.status = 'DELIVERED'
+GROUP BY d.year_month
+ORDER BY d.year_month;
+
+-- Hallazgo 3: Crecimiento de ventas por provincia vs. mismo trimestre del año anterior
+WITH ventas_trimestre AS (
+    SELECT
+        p.name               AS provincia,
+        d.year,
+        d.quarter,
+        SUM(f.total_amount)  AS ventas
+    FROM fact_orders  AS f
+    JOIN dim_province AS p ON p.province_key = f.province_key
+    JOIN dim_date     AS d ON d.date_key     = f.date_key
+    WHERE f.is_valid_sale
+    GROUP BY p.name, d.year, d.quarter
+)
+SELECT
+    provincia,
+    year,
+    quarter,
+    ventas,
+    ROUND((ventas - LAG(ventas, 4) OVER (PARTITION BY provincia ORDER BY year, quarter))
+          * 100.0 / LAG(ventas, 4) OVER (PARTITION BY provincia ORDER BY year, quarter), 1)
+          AS crecimiento_pct
+FROM ventas_trimestre
+ORDER BY provincia, year, quarter;
