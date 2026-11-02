@@ -99,6 +99,9 @@ SELECT
     c.name
 FROM raw.province AS c;
 
+-- Fila para ventas sin provincia conocida
+INSERT INTO dim_province VALUES (-1, -1, '--', 'Desconocida');
+
 -- ---------------------------------------------------------------
 -- Dimensión tienda
 -- ---------------------------------------------------------------
@@ -123,6 +126,9 @@ FROM raw.store AS s
 LEFT JOIN raw.address  AS a ON a.address_id  = s.address_id
 LEFT JOIN raw.province AS p ON p.province_id = a.province_id;
 
+-- Fila para ventas online (no pasan por ninguna tienda)
+INSERT INTO dim_store VALUES (-1, -1, 'Sin tienda (online)', NULL, NULL, NULL);
+
 -- ---------------------------------------------------------------
 -- Dimensión cliente
 -- ---------------------------------------------------------------
@@ -145,3 +151,36 @@ FROM raw.customer AS c;
 
 -- Fila para hechos sin cliente (ej. NPS anónimos)
 INSERT INTO dim_customer VALUES (-1, -1, 'Desconocido', NULL, NULL);
+
+-- ---------------------------------------------------------------
+-- Dimensión fecha (generada, no viene de raw)
+-- ---------------------------------------------------------------
+CREATE TABLE dim_date (
+    date_key     INTEGER PRIMARY KEY,   -- ej. 20240131
+    date         DATE NOT NULL,
+    year         INTEGER,
+    quarter      INTEGER,
+    month        INTEGER,
+    month_name   VARCHAR,
+    year_month   VARCHAR,               -- ej. 2024-01
+    day          INTEGER,
+    day_name     VARCHAR,
+    is_weekend   BOOLEAN
+);
+
+INSERT INTO dim_date
+SELECT
+    CAST(strftime(d.fecha, '%Y%m%d') AS INTEGER) AS date_key,
+    d.fecha                                     AS date,
+    year(d.fecha)                               AS year,
+    quarter(d.fecha)                            AS quarter,
+    month(d.fecha)                              AS month,
+    monthname(d.fecha)                          AS month_name,
+    strftime(d.fecha, '%Y-%m')                  AS year_month,
+    day(d.fecha)                                AS day,
+    dayname(d.fecha)                            AS day_name,
+    isodow(d.fecha) IN (6, 7)                   AS is_weekend
+FROM (
+    SELECT CAST(range AS DATE) AS fecha
+    FROM range(DATE '2024-01-01', DATE '2025-10-01', INTERVAL 1 DAY)
+) AS d;

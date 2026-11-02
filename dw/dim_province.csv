@@ -3,3 +3,4 @@ province_key,province_id,code,name
 2,2,CBA,Córdoba
 3,3,SF,Santa Fe
 4,4,MZA,Mendoza
+-1,-1,--,Desconocida

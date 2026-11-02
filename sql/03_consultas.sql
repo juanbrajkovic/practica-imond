@@ -22,35 +22,15 @@ ORDER BY product_key;
 SELECT MIN(order_date) AS primera, MAX(order_date) AS ultima
 FROM raw.sales_order;
 
--- ---------------------------------------------------------------
--- Dimensión fecha (generada, no viene de raw)
--- ---------------------------------------------------------------
-CREATE TABLE dim_date (
-    date_key     INTEGER PRIMARY KEY,   -- ej. 20240131
-    date         DATE NOT NULL,
-    year         INTEGER,
-    quarter      INTEGER,
-    month        INTEGER,
-    month_name   VARCHAR,
-    year_month   VARCHAR,               -- ej. 2024-01
-    day          INTEGER,
-    day_name     VARCHAR,
-    is_weekend   BOOLEAN
-);
+-- Revisión: ventas por estado del pedido
+SELECT status, COUNT(*) AS filas, SUM(line_total) AS ventas
+FROM fact_sales
+GROUP BY status
+ORDER BY filas DESC;
 
-INSERT INTO dim_date
-SELECT
-    CAST(strftime(d.fecha, '%Y%m%d') AS INTEGER) AS date_key,
-    d.fecha                                     AS date,
-    year(d.fecha)                               AS year,
-    quarter(d.fecha)                            AS quarter,
-    month(d.fecha)                              AS month,
-    monthname(d.fecha)                          AS month_name,
-    strftime(d.fecha, '%Y-%m')                  AS year_month,
-    day(d.fecha)                                AS day,
-    dayname(d.fecha)                            AS day_name,
-    isodow(d.fecha) IN (6, 7)                   AS is_weekend
-FROM (
-    SELECT CAST(range AS DATE) AS fecha
-    FROM range(DATE '2024-01-01', DATE '2025-10-01', INTERVAL 1 DAY)
-) AS d;
+-- Revisión: ventas por provincia (¿cuántas quedaron "Desconocida"?)
+SELECT p.name AS provincia, COUNT(*) AS filas
+FROM fact_sales AS f
+JOIN dim_province AS p ON p.province_key = f.province_key
+GROUP BY p.name
+ORDER BY filas DESC;

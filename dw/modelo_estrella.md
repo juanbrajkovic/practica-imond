@@ -4,6 +4,12 @@ Generado por `run_sql.py` a partir de las tablas de `warehouse.duckdb`.
 
 ```mermaid
 erDiagram
+    dim_channel ||--o{ fact_sales : "channel_key"
+    dim_customer ||--o{ fact_sales : "customer_key"
+    dim_date ||--o{ fact_sales : "date_key"
+    dim_product ||--o{ fact_sales : "product_key"
+    dim_province ||--o{ fact_sales : "province_key"
+    dim_store ||--o{ fact_sales : "store_key"
     dim_channel {
         INTEGER channel_key PK
         INTEGER channel_id
@@ -51,5 +57,20 @@ erDiagram
         VARCHAR address
         VARCHAR city
         VARCHAR province
+    }
+    fact_sales {
+        BIGINT order_item_id PK
+        BIGINT order_id
+        INTEGER date_key FK
+        INTEGER customer_key FK
+        INTEGER product_key FK
+        INTEGER channel_key FK
+        INTEGER store_key FK
+        INTEGER province_key FK
+        VARCHAR status
+        INTEGER quantity
+        DECIMAL unit_price
+        DECIMAL discount_amount
+        DECIMAL line_total
     }
 ```
