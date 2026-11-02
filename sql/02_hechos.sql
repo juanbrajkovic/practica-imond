@@ -180,3 +180,79 @@ FROM raw.web_session AS w
 LEFT JOIN dim_customer AS c  ON c.customer_id = w.customer_id
 -- todas las visitas web son del canal ONLINE
 LEFT JOIN dim_channel  AS ch ON ch.code = 'ONLINE';
+
+-- ---------------------------------------------------------------
+-- Hecho pagos: una fila por pago
+-- ---------------------------------------------------------------
+CREATE TABLE fact_payment (
+    payment_id    BIGINT PRIMARY KEY,
+    order_id      BIGINT NOT NULL,
+    date_key      INTEGER REFERENCES dim_date(date_key),         -- fecha del pedido
+    customer_key  INTEGER REFERENCES dim_customer(customer_key),
+    channel_key   INTEGER REFERENCES dim_channel(channel_key),
+    method        VARCHAR,     -- CASH / CARD / TRANSFER / GATEWAY
+    status        VARCHAR,     -- PENDING / PAID / FAILED / REFUNDED
+    amount        DECIMAL(12, 2),
+    paid_at       TIMESTAMP,   -- vacío si el pago no se concretó
+    is_paid       BOOLEAN
+);
+
+INSERT INTO fact_payment
+SELECT
+    pa.payment_id,
+    pa.order_id,
+    CAST(strftime(o.order_date, '%Y%m%d') AS INTEGER) AS date_key,
+    COALESCE(c.customer_key, -1) AS customer_key,
+    ch.channel_key,
+    pa.method,
+    pa.status,
+    pa.amount,
+    pa.paid_at,
+    pa.paid_at IS NOT NULL AS is_paid
+FROM raw.payment AS pa
+JOIN raw.sales_order   AS o  ON o.order_id     = pa.order_id
+LEFT JOIN dim_customer AS c  ON c.customer_id  = o.customer_id
+LEFT JOIN dim_channel  AS ch ON ch.channel_id  = o.channel_id;
+
+-- ---------------------------------------------------------------
+-- Hecho envíos: una fila por envío
+-- Base para analizar tiempos de entrega por provincia
+-- ---------------------------------------------------------------
+CREATE TABLE fact_shipment (
+    shipment_id             BIGINT PRIMARY KEY,
+    order_id                BIGINT NOT NULL,
+    date_key                INTEGER REFERENCES dim_date(date_key),  -- fecha del pedido
+    customer_key            INTEGER REFERENCES dim_customer(customer_key),
+    channel_key             INTEGER REFERENCES dim_channel(channel_key),
+    store_key               INTEGER REFERENCES dim_store(store_key),
+    province_key            INTEGER REFERENCES dim_province(province_key),
+    carrier                 VARCHAR,
+    status                  VARCHAR,     -- READY / SHIPPED / DELIVERED / CANCELLED
+    shipped_at              TIMESTAMP,
+    delivered_at            TIMESTAMP,
+    transit_days            INTEGER,     -- envío → entrega
+    order_to_delivery_days  INTEGER      -- compra → entrega
+);
+
+INSERT INTO fact_shipment
+SELECT
+    sh.shipment_id,
+    sh.order_id,
+    CAST(strftime(o.order_date, '%Y%m%d') AS INTEGER) AS date_key,
+    COALESCE(c.customer_key, -1)  AS customer_key,
+    ch.channel_key,
+    COALESCE(s.store_key, -1)     AS store_key,
+    COALESCE(pr.province_key, -1) AS province_key,
+    sh.carrier,
+    sh.status,
+    sh.shipped_at,
+    sh.delivered_at,
+    date_diff('day', sh.shipped_at, sh.delivered_at)  AS transit_days,
+    date_diff('day', o.order_date, sh.delivered_at)   AS order_to_delivery_days
+FROM raw.shipment AS sh
+JOIN raw.sales_order   AS o  ON o.order_id     = sh.order_id
+LEFT JOIN dim_customer AS c  ON c.customer_id  = o.customer_id
+LEFT JOIN dim_channel  AS ch ON ch.channel_id  = o.channel_id
+LEFT JOIN dim_store    AS s  ON s.store_id     = o.store_id
+LEFT JOIN raw.address  AS sa ON sa.address_id  = o.shipping_address_id
+LEFT JOIN dim_province AS pr ON pr.province_id = sa.province_id;

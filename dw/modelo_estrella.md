@@ -6,21 +6,29 @@ Generado por `run_sql.py` a partir de las tablas de `warehouse.duckdb`.
 erDiagram
     dim_channel ||--o{ fact_nps : "channel_key"
     dim_channel ||--o{ fact_orders : "channel_key"
+    dim_channel ||--o{ fact_payment : "channel_key"
     dim_channel ||--o{ fact_sales : "channel_key"
+    dim_channel ||--o{ fact_shipment : "channel_key"
     dim_channel ||--o{ fact_web_session : "channel_key"
     dim_customer ||--o{ fact_nps : "customer_key"
     dim_customer ||--o{ fact_orders : "customer_key"
+    dim_customer ||--o{ fact_payment : "customer_key"
     dim_customer ||--o{ fact_sales : "customer_key"
+    dim_customer ||--o{ fact_shipment : "customer_key"
     dim_customer ||--o{ fact_web_session : "customer_key"
     dim_date ||--o{ fact_nps : "date_key"
     dim_date ||--o{ fact_orders : "date_key"
+    dim_date ||--o{ fact_payment : "date_key"
     dim_date ||--o{ fact_sales : "date_key"
+    dim_date ||--o{ fact_shipment : "date_key"
     dim_date ||--o{ fact_web_session : "date_key"
     dim_product ||--o{ fact_sales : "product_key"
     dim_province ||--o{ fact_orders : "province_key"
     dim_province ||--o{ fact_sales : "province_key"
+    dim_province ||--o{ fact_shipment : "province_key"
     dim_store ||--o{ fact_orders : "store_key"
     dim_store ||--o{ fact_sales : "store_key"
+    dim_store ||--o{ fact_shipment : "store_key"
     dim_channel {
         INTEGER channel_key PK
         INTEGER channel_id
@@ -94,6 +102,18 @@ erDiagram
         DECIMAL shipping_fee
         DECIMAL total_amount
     }
+    fact_payment {
+        BIGINT payment_id PK
+        BIGINT order_id
+        INTEGER date_key FK
+        INTEGER customer_key FK
+        INTEGER channel_key FK
+        VARCHAR method
+        VARCHAR status
+        DECIMAL amount
+        TIMESTAMP paid_at
+        BOOLEAN is_paid
+    }
     fact_sales {
         BIGINT order_item_id PK
         BIGINT order_id
@@ -109,6 +129,21 @@ erDiagram
         DECIMAL unit_price
         DECIMAL discount_amount
         DECIMAL line_total
+    }
+    fact_shipment {
+        BIGINT shipment_id PK
+        BIGINT order_id
+        INTEGER date_key FK
+        INTEGER customer_key FK
+        INTEGER channel_key FK
+        INTEGER store_key FK
+        INTEGER province_key FK
+        VARCHAR carrier
+        VARCHAR status
+        TIMESTAMP shipped_at
+        TIMESTAMP delivered_at
+        INTEGER transit_days
+        INTEGER order_to_delivery_days
     }
     fact_web_session {
         BIGINT session_id PK
