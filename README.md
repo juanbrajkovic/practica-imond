@@ -5,7 +5,7 @@ Práctica de **Introducción al Marketing Online y los Negocios Digitales**.
 Mini–ecosistema de datos comercial (online + offline) para EcoBottle AR: a partir de las tablas de origen del sistema de ventas se construye un **modelo estrella (Kimball)** en DuckDB, se calculan los KPIs comerciales y se exportan las tablas a CSV para alimentar el dashboard.
 
 - Repositorio original (datos y consigna): [AugustoCarmona/mkt_tp_final](https://github.com/AugustoCarmona/mkt_tp_final)
-- Dashboard: _[agregar enlace al tablero]_
+- Dashboard: (https://datastudio.google.com/reporting/686c7b8e-da3f-4d25-b472-912ec1ac4d7b)
 
 ---
 
@@ -280,6 +280,8 @@ Convenciones:
 - Todas las visitas web se asignan al canal **ONLINE**.
 - **NPS** = (% promotores − % detractores) × 100. Promotor: 9–10; Pasivo: 7–8; Detractor: 0–6.
 - **Tiempos de entrega:** se calculan solo sobre envíos `DELIVERED`. Los pedidos de fines de septiembre 2025 que todavía no se entregaron al momento de la foto quedan afuera.
+   **Dashboard**
+   - El filtro de provincia no afecta Usuarios Activos ni NPS, y el de producto solo afecta el ranking: las visitas web y las encuestas no tienen provincia ni producto en los datos de origen, y las ventas por pedido pueden incluir varios productos.
 
 ---
 
